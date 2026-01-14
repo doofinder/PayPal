@@ -27,7 +27,7 @@ defmodule PayPalAPITest do
   test "get access token, fail with timeout" do
     use_cassette "api_access_token_timeout" do
       resp = PayPal.API.get_oauth_token()
-      assert resp == {:error, :bad_network}
+      assert resp == {:error, "timeout"}
     end
   end
 

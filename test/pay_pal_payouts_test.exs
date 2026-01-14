@@ -70,7 +70,18 @@ defmodule PayPalPayoutsTest do
 
   test "when creating a payment batch returns an error tuple" do
     use_cassette "payouts_create_payout_error", custom: true do
-      assert {:error, :malformed_request} = PayPal.Payments.Payouts.create_batch(%{}, [nil])
+      assert {:error, %{
+        message: "Invalid request. See details.",
+        name: "VALIDATION_ERROR",
+        details: [
+          %{
+            field: "batch_header",
+            issue: "Value is invalid."
+          }
+        ],
+        information_link: "https://developer.paypal.com/webapps/developer/docs/api/#VALIDATION_ERROR",
+        debug_id: "9a24956b454c4"
+      }} = PayPal.Payments.Payouts.create_batch(%{}, [nil])
     end
   end
 
@@ -106,7 +117,13 @@ defmodule PayPalPayoutsTest do
 
   test "cancel payout already claimed error" do
     use_cassette "payouts_cancel_already_claimed", custom: true do
-      assert {:error, :malformed_request } = PayPal.Payments.Payouts.cancel("YYKMVR2AVSVZ4")
+      assert {:error, %{
+        links: [],
+        message: "Only items in Unclaimed status can be cancelled.",
+        name: "ITEM_INCORRECT_STATUS",
+        information_link: "https://developer.paypal.com/docs/api/payments.payouts-batch/#errors",
+        debug_id: "49e81dfa52aaf"
+      }} = PayPal.Payments.Payouts.cancel("YYKMVR2AVSVZ4")
     end
   end
 

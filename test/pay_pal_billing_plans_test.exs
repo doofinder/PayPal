@@ -37,7 +37,7 @@ defmodule PayPalBillingPlansTest do
   test "get billing plans, fail timeout" do
     use_cassette "billing_plans_get_plans_timeout" do
       resp = PayPal.Billing.Plans.list()
-      assert resp == {:error, :bad_network}
+      assert resp == {:error, "nxdomain"}
     end
   end
 
@@ -139,7 +139,7 @@ defmodule PayPalBillingPlansTest do
 
     use_cassette "billing_plans_create_plan_error" do
       resp = PayPal.Billing.Plans.create(plan)
-      assert resp == {:error, :bad_network}
+      assert resp == {:error, "nxdomain"}
     end
   end
 
@@ -154,7 +154,18 @@ defmodule PayPalBillingPlansTest do
   test "get billing plan by ID, not found" do
     use_cassette "billing_plans_get_plan_not_found" do
       resp = PayPal.Billing.Plans.show("P-3C560437P9994340RZAYE21X")
-      assert resp == {:ok, nil}
+      assert resp == {:error, %{
+        message: "",
+        name: "TEMPLATE_ID_INVALID",
+        details: [
+          %{
+            field: "template id is invalid",
+            issue: "Incorrect Template Id."
+          }
+        ],
+        information_link: "https://developer.paypal.com/webapps/developer/docs/api/#TEMPLATE_ID_INVALID",
+        debug_id: "1f692dc948f3d"
+      }}
     end
   end
 
@@ -177,7 +188,12 @@ defmodule PayPalBillingPlansTest do
     op = %{op: "replace", path: "/merchant-preferences", value: %{ cancel_url: "http://www.cancel.com" }}
     use_cassette "billing_plans_update_plan_error" do
       resp = PayPal.Billing.Plans.update("P-3C560437P9994340RZAYE2OY", op)
-      assert resp == {:error, :malformed_request}
+      assert resp == {:error, %{
+        message: "Incoming JSON request does not map to API request",
+        name: "MALFORMED_REQUEST",
+        information_link: "https://developer.paypal.com/webapps/developer/docs/api/#MALFORMED_REQUEST",
+        debug_id: "2418f505ab0db"
+      }}
     end
   end
 end
