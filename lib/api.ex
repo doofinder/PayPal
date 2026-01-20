@@ -14,6 +14,7 @@ defmodule PayPal.API do
 
   - {:ok, {"XXXXXXXXXXXXXX", 32000}}
   - {:error, :unauthorised}
+  - {:error, reason}
   - {:error, :bad_network}
 
   ## Examples
@@ -22,7 +23,7 @@ defmodule PayPal.API do
     {:ok, {"XXXXXXXXXXXXXX", 32000}}
 
   """
-  @spec get_oauth_token :: {:error, :unauthorised | :bad_network} | {:ok, {binary, integer}}
+  @spec get_oauth_token :: {:error, :unauthorised | :bad_network | map} | {:ok, {binary, integer}}
   def get_oauth_token do
     headers = %{"Content-Type" => "application/x-www-form-urlencoded"}
     options = [hackney: [basic_auth: {PayPal.Config.get.client_id, PayPal.Config.get.client_secret}]]
@@ -34,6 +35,8 @@ defmodule PayPal.API do
       {:ok, %{body: body, status_code: 200}} ->
         %{access_token: access_token, expires_in: expires_in} = Poison.decode!(body, keys: :atoms)
         {:ok, {access_token, expires_in}}
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, reason}
       _->
         {:error, :bad_network}
     end
@@ -49,6 +52,7 @@ defmodule PayPal.API do
   - {:ok, data}
   - {:ok, :not_found}
   - {:ok, :no_content}
+  - {:error, :unauthorised}
   - {:error, :bad_network}
   - {:error, reason}
 
@@ -67,12 +71,14 @@ defmodule PayPal.API do
         {:ok, Poison.decode!(body, keys: :atoms)}
       {:ok, %{status_code: 404}} ->
         {:ok, :not_found}
-      {:ok, %{status_code: 400}} ->
-        {:ok, :not_found}
+      {:ok, %{body: body, status_code: 400}} ->
+        {:error, Poison.decode!(body, keys: :atoms)}
       {:ok, %{status_code: 204}} ->
         {:ok, :no_content}
       {:ok, %{body: body}}->
         {:error, body}
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error,  reason}
       _ ->
         {:error, :bad_network}
     end
@@ -88,6 +94,7 @@ defmodule PayPal.API do
   - {:ok, data}
   - {:ok, :not_found}
   - {:ok, :no_content}
+  - {:error, :unauthorised}
   - {:error, :bad_network}
   - {:error, reason}
 
@@ -111,11 +118,10 @@ defmodule PayPal.API do
         {:ok, :not_found}
       {:ok, %{status_code: 204}} ->
         {:ok, nil}
-      {:ok, %{status_code: 400}} ->
-        {:error, :malformed_request}
-      {:ok, %{body: body}} = resp ->
-        IO.inspect resp
-        {:error, body}
+      {:ok, %{body: body, status_code: 400}} ->
+        {:error, Poison.decode!(body, keys: :atoms)}
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, reason}
       _ ->
         {:error, :bad_network}
     end
@@ -131,8 +137,8 @@ defmodule PayPal.API do
   - {:ok, data}
   - {:ok, :not_found}
   - {:ok, :no_content}
+  - {:error, :unauthorised}
   - {:error, :bad_network}
-  - {:error, reason}
 
   ## Examples
 
@@ -154,13 +160,12 @@ defmodule PayPal.API do
         {:ok, :not_found}
       {:ok, %{status_code: 204}} ->
         {:ok, :no_content}
-      {:ok, %{status_code: 400}} ->
-        {:error, :malformed_request}
-      {:ok, %{body: body}} = resp ->
-        IO.inspect resp
-        {:error, body}
+      {:ok, %{body: body, status_code: 400}} ->
+        {:error, Poison.decode!(body, keys: :atoms)}
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, reason}
       _ ->
-        {:error, :bad_network}
+        {:error, :unknown_error}
     end
   end
 
