@@ -33,7 +33,7 @@ defmodule PayPal.API do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{body: body, status_code: 200}} ->
-        %{access_token: access_token, expires_in: expires_in} = Poison.decode!(body, keys: :atoms)
+        %{access_token: access_token, expires_in: expires_in} = Jason.decode!(body, keys: :atoms)
         {:ok, {access_token, expires_in}}
       {:error, %HTTPoison.Error{reason: reason}} ->
         {:error, reason}
@@ -68,11 +68,11 @@ defmodule PayPal.API do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{body: body, status_code: 200}} ->
-        {:ok, Poison.decode!(body, keys: :atoms)}
+        {:ok, Jason.decode!(body, keys: :atoms)}
       {:ok, %{status_code: 404}} ->
         {:ok, :not_found}
       {:ok, %{body: body, status_code: 400}} ->
-        {:error, Poison.decode!(body, keys: :atoms)}
+        {:error, Jason.decode!(body, keys: :atoms)}
       {:ok, %{status_code: 204}} ->
         {:ok, :no_content}
       {:ok, %{body: body}}->
@@ -106,20 +106,20 @@ defmodule PayPal.API do
   """
   @spec post(String.t, map | list | nil) :: {:ok, map | :not_found | :no_content | nil} | {:error, :unauthorised | :bad_network | any}
   def post(url, data) do
-    {:ok, data} = Poison.encode(data)
+    {:ok, data} = Jason.encode(data)
     case HTTPoison.post(base_url() <> url, data, headers()) do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{body: body, status_code: 200}} ->
-        {:ok, Poison.decode!(body, keys: :atoms)}
+        {:ok, Jason.decode!(body, keys: :atoms)}
       {:ok, %{body: body, status_code: 201}} ->
-        {:ok, Poison.decode!(body, keys: :atoms)}
+        {:ok, Jason.decode!(body, keys: :atoms)}
       {:ok, %{status_code: 404}} ->
         {:ok, :not_found}
       {:ok, %{status_code: 204}} ->
         {:ok, nil}
       {:ok, %{body: body, status_code: 400}} ->
-        {:error, Poison.decode!(body, keys: :atoms)}
+        {:error, Jason.decode!(body, keys: :atoms)}
       {:error, %HTTPoison.Error{reason: reason}} ->
         {:error, reason}
       _ ->
@@ -148,20 +148,20 @@ defmodule PayPal.API do
   """
   @spec patch(String.t, map | list) :: {:ok, map | nil | :not_found | :no_content} | {:error, :unauthorised | :bad_network | any}
   def patch(url, data) do
-    {:ok, data} = Poison.encode(data)
+    {:ok, data} = Jason.encode(data)
     case HTTPoison.patch(base_url() <> url, data, headers()) do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{status_code: 200}} ->
         {:ok, nil}
       {:ok, %{body: body, status_code: 201}} ->
-        {:ok, Poison.decode!(body, keys: :atoms)}
+        {:ok, Jason.decode!(body, keys: :atoms)}
       {:ok, %{status_code: 404}} ->
         {:ok, :not_found}
       {:ok, %{status_code: 204}} ->
         {:ok, :no_content}
       {:ok, %{body: body, status_code: 400}} ->
-        {:error, Poison.decode!(body, keys: :atoms)}
+        {:error, Jason.decode!(body, keys: :atoms)}
       {:error, %HTTPoison.Error{reason: reason}} ->
         {:error, reason}
       _ ->
