@@ -26,7 +26,8 @@ defmodule PayPal.API do
   @spec get_oauth_token :: {:error, :unauthorised | :bad_network | map} | {:ok, {binary, integer}}
   def get_oauth_token do
     headers = %{"Content-Type" => "application/x-www-form-urlencoded"}
-    options = [hackney: [basic_auth: {PayPal.Config.get.client_id, PayPal.Config.get.client_secret}]]
+    auth = {:basic_auth, {PayPal.Config.get.client_id, PayPal.Config.get.client_secret}}
+    options = Keyword.update!(http_options(), :hackney, &[auth | &1])
     form = {:form, [grant_type: "client_credentials"]}
 
     case HTTPoison.post(base_url() <> "oauth2/token", form, headers, options) do
@@ -64,7 +65,7 @@ defmodule PayPal.API do
   """
   @spec get(String.t) :: {:ok, map | :not_found | :no_content } | {:error, :unauthorised | :bad_network | any}
   def get(url) do
-    case HTTPoison.get(base_url() <> url, headers()) do
+    case HTTPoison.get(base_url() <> url, headers(), http_options()) do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{body: body, status_code: 200}} ->
@@ -107,7 +108,7 @@ defmodule PayPal.API do
   @spec post(String.t, map | list | nil) :: {:ok, map | :not_found | :no_content | nil} | {:error, :unauthorised | :bad_network | any}
   def post(url, data) do
     {:ok, data} = Jason.encode(data)
-    case HTTPoison.post(base_url() <> url, data, headers()) do
+    case HTTPoison.post(base_url() <> url, data, headers(), http_options()) do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{body: body, status_code: 200}} ->
@@ -149,7 +150,7 @@ defmodule PayPal.API do
   @spec patch(String.t, map | list) :: {:ok, map | nil | :not_found | :no_content} | {:error, :unauthorised | :bad_network | any}
   def patch(url, data) do
     {:ok, data} = Jason.encode(data)
-    case HTTPoison.patch(base_url() <> url, data, headers()) do
+    case HTTPoison.patch(base_url() <> url, data, headers(), http_options()) do
       {:ok, %{status_code: 401}} ->
         {:error, :unauthorised}
       {:ok, %{status_code: 200}} ->
@@ -167,6 +168,14 @@ defmodule PayPal.API do
       _ ->
         {:error, :unknown_error}
     end
+  end
+
+  # hackney 4 never stops a connection made outside a pool once the server closes it:
+  # the process stays until the caller dies, and the token refresher never dies.
+  # The default pool has no receive timeout, hence the explicit one.
+  @spec http_options :: keyword
+  defp http_options do
+    [hackney: [pool: :default], recv_timeout: 30_000]
   end
 
   @spec headers :: map
